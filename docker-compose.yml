@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: library
+      POSTGRES_PASSWORD: library
+      POSTGRES_DB: neighborhood_library
+    volumes:
+      - library_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U library -d neighborhood_library"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "50051:50051"
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://library:library@postgres:5432/neighborhood_library
+      GRPC_HOST: 0.0.0.0
+      GRPC_PORT: "50051"
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      AUTH_SECRET: change-me-in-production-use-long-random-string
+    depends_on:
+      - backend
+
+volumes:
+  library_pg_data:

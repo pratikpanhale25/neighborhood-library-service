@@ -1,0 +1,13 @@
+# Compile with: pip-compile requirements.in -o requirements.txt
+# Runtime deps mirror pyproject.toml for pip-tools workflows.
+grpcio>=1.62.0
+grpcio-tools>=1.62.0
+protobuf>=4.25.0
+sqlalchemy>=2.0.30
+psycopg2-binary>=2.9.9
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-dotenv>=1.0.0
+pydantic>=2.0
+pydantic-settings>=2.2.0
+structlog>=24.1.0

@@ -1,0 +1,268 @@
+syntax = "proto3";
+
+package library.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/neighborhood-library/gen/library/v1;libraryv1";
+
+// A catalog item (inventory: total_copies / available_copies).
+message Book {
+  string id = 1;
+  string title = 2;
+  string author = 3;
+  string isbn = 4;
+  int32 publication_year = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  int32 total_copies = 8;
+  int32 available_copies = 9;
+}
+
+// A library member.
+message Member {
+  string id = 1;
+  string full_name = 2;
+  string email = 3;
+  string phone = 4;
+  string address = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// Borrowing record (loan). Fields is_overdue / days_overdue are populated by the server for reads.
+message Loan {
+  string id = 1;
+  string book_id = 2;
+  string member_id = 3;
+  google.protobuf.Timestamp borrowed_at = 4;
+  google.protobuf.Timestamp due_at = 5;
+  google.protobuf.Timestamp returned_at = 6;
+  // Active loans past due_at (UTC): true and days_overdue > 0; otherwise false / 0.
+  bool is_overdue = 7;
+  int32 days_overdue = 8;
+  // BORROWED | RETURNED | OVERDUE (OVERDUE is derived for active loans past due_at).
+  string status = 9;
+}
+
+// Ledger row for an overdue (or other) charge.
+message Fine {
+  string id = 1;
+  string loan_id = 2;
+  string member_id = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string status = 6; // pending | paid | waived
+  string reason = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp resolved_at = 9;
+  string notes = 10;
+}
+
+// --- Books ---
+
+message CreateBookRequest {
+  string title = 1;
+  string author = 2;
+  string isbn = 3;
+  int32 publication_year = 4;
+  // Defaults to 1 when unset or zero.
+  optional int32 total_copies = 5;
+}
+
+message CreateBookResponse {
+  Book book = 1;
+}
+
+message UpdateBookRequest {
+  string id = 1;
+  string title = 2;
+  string author = 3;
+  string isbn = 4;
+  int32 publication_year = 5;
+  optional int32 total_copies = 6;
+}
+
+message UpdateBookResponse {
+  Book book = 1;
+}
+
+message GetBookRequest {
+  string id = 1;
+}
+
+message GetBookResponse {
+  Book book = 1;
+}
+
+message ListBooksRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListBooksResponse {
+  repeated Book books = 1;
+  string next_page_token = 2;
+}
+
+// --- Members ---
+
+message CreateMemberRequest {
+  string full_name = 1;
+  string email = 2;
+  string phone = 3;
+  string address = 4;
+}
+
+message CreateMemberResponse {
+  Member member = 1;
+}
+
+message UpdateMemberRequest {
+  string id = 1;
+  string full_name = 2;
+  string email = 3;
+  string phone = 4;
+  string address = 5;
+}
+
+message UpdateMemberResponse {
+  Member member = 1;
+}
+
+message GetMemberRequest {
+  string id = 1;
+}
+
+message GetMemberResponse {
+  Member member = 1;
+}
+
+message ListMembersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListMembersResponse {
+  repeated Member members = 1;
+  string next_page_token = 2;
+}
+
+// --- Loans ---
+
+enum LoanFilter {
+  LOAN_FILTER_UNSPECIFIED = 0;
+  LOAN_FILTER_ACTIVE_ONLY = 1;
+  LOAN_FILTER_RETURNED_ONLY = 2;
+  LOAN_FILTER_ALL = 3;
+  // Active loans whose due_at is before now (UTC).
+  LOAN_FILTER_OVERDUE_ONLY = 4;
+}
+
+message BorrowBookRequest {
+  string member_id = 1;
+  string book_id = 2;
+  google.protobuf.Timestamp due_at = 3;
+  // If due_at is unset: loan_period_days overrides server default when > 0.
+  optional int32 loan_period_days = 4;
+}
+
+message BorrowBookResponse {
+  Loan loan = 1;
+}
+
+message ReturnBookRequest {
+  // Exactly one of loan_id or (member_id + book_id) should be set for active loan lookup.
+  string loan_id = 1;
+  string member_id = 2;
+  string book_id = 3;
+}
+
+message ReturnBookResponse {
+  Loan loan = 1;
+  // Present when a pending overdue fine row was created on return.
+  Fine created_fine = 2;
+}
+
+message ListLoansRequest {
+  string member_id = 1;
+  string book_id = 2;
+  LoanFilter filter = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListLoansResponse {
+  repeated Loan loans = 1;
+  string next_page_token = 2;
+}
+
+// --- Fines ---
+
+enum FineStatusFilter {
+  FINE_STATUS_FILTER_UNSPECIFIED = 0;
+  FINE_STATUS_FILTER_PENDING = 1;
+  FINE_STATUS_FILTER_PAID = 2;
+  FINE_STATUS_FILTER_WAIVED = 3;
+  FINE_STATUS_FILTER_ANY = 4;
+}
+
+message ListFinesRequest {
+  string member_id = 1;
+  FineStatusFilter status_filter = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListFinesResponse {
+  repeated Fine fines = 1;
+  string next_page_token = 2;
+}
+
+message GetFineRequest {
+  string id = 1;
+}
+
+message GetFineResponse {
+  Fine fine = 1;
+}
+
+message PayFineRequest {
+  string fine_id = 1;
+  string notes = 2;
+}
+
+message PayFineResponse {
+  Fine fine = 1;
+}
+
+message WaiveFineRequest {
+  string fine_id = 1;
+  string notes = 2;
+}
+
+message WaiveFineResponse {
+  Fine fine = 1;
+}
+
+// Library circulation and catalog API.
+service LibraryService {
+  rpc CreateBook(CreateBookRequest) returns (CreateBookResponse);
+  rpc UpdateBook(UpdateBookRequest) returns (UpdateBookResponse);
+  rpc GetBook(GetBookRequest) returns (GetBookResponse);
+  rpc ListBooks(ListBooksRequest) returns (ListBooksResponse);
+
+  rpc CreateMember(CreateMemberRequest) returns (CreateMemberResponse);
+  rpc UpdateMember(UpdateMemberRequest) returns (UpdateMemberResponse);
+  rpc GetMember(GetMemberRequest) returns (GetMemberResponse);
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+
+  rpc BorrowBook(BorrowBookRequest) returns (BorrowBookResponse);
+  rpc ReturnBook(ReturnBookRequest) returns (ReturnBookResponse);
+  rpc ListLoans(ListLoansRequest) returns (ListLoansResponse);
+
+  rpc ListFines(ListFinesRequest) returns (ListFinesResponse);
+  rpc GetFine(GetFineRequest) returns (GetFineResponse);
+  rpc PayFine(PayFineRequest) returns (PayFineResponse);
+  rpc WaiveFine(WaiveFineRequest) returns (WaiveFineResponse);
+}
