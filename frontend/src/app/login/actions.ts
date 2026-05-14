@@ -6,8 +6,13 @@ import { redirect } from "next/navigation";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
 
 export async function loginAction(formData: FormData) {
-  const username = (formData.get("username") ?? "").toString();
-  const password = (formData.get("password") ?? "").toString();
+  // WHY: trim so accidental spaces in the browser field do not fail the demo check.
+  const username = (formData.get("username") ?? "").toString().trim();
+  const password = (formData.get("password") ?? "").toString().trim();
+
+  if (!username || !password) {
+    redirect("/login?error=credentials");
+  }
 
   if (username !== "admin" || password !== "admin") {
     redirect("/login?error=credentials");

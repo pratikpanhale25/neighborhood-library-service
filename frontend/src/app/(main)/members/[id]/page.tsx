@@ -4,6 +4,7 @@ import useSWR from "swr";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { apiGetBook, apiGetMember, apiMemberBorrowedBooks, ApiError } from "@/lib/api-client";
+import { DataTable } from "@/components/DataTable";
 
 export default function MemberDetailPage() {
   const params = useParams();
@@ -41,6 +42,8 @@ export default function MemberDetailPage() {
   if (errMsg) return <p className="text-sm text-red-700">{errMsg}</p>;
   if (!member) return <p className="text-sm text-zinc-600">Loading…</p>;
 
+  const borrowedRows = borrowed ?? [];
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -67,38 +70,19 @@ export default function MemberDetailPage() {
       </dl>
 
       <h2 className="mb-2 text-lg font-medium text-zinc-800">Books currently borrowed</h2>
-      <div className="overflow-x-auto rounded border border-zinc-200 bg-white">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50">
-            <tr>
-              <th className="px-3 py-2">Loan ID</th>
-              <th className="px-3 py-2">Book Name</th>
-              <th className="px-3 py-2">Borrowed</th>
-              <th className="px-3 py-2">Due</th>
-              <th className="px-3 py-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(borrowed ?? []).length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-3 py-4 text-zinc-500">
-                  No active loans.
-                </td>
-              </tr>
-            ) : (
-              (borrowed ?? []).map((r) => (
-                <tr key={r.id} className="border-b border-zinc-100">
-                  <td className="px-3 py-2 font-mono text-xs">{r.id}</td>
-                  <td className="px-3 py-2">{bookTitles?.[r.book_id] ?? r.book_id}</td>
-                  <td className="px-3 py-2">{r.borrowed_at}</td>
-                  <td className="px-3 py-2">{r.due_date ?? "—"}</td>
-                  <td className="px-3 py-2">{r.status}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        rowKey={(r) => r.id}
+        emptyMessage="No active loans."
+        isLoading={false}
+        rows={borrowedRows}
+        columns={[
+          { header: "Loan ID", cellClassName: "font-mono text-xs", cell: (r) => r.id },
+          { header: "Book Name", cell: (r) => bookTitles?.[r.book_id] ?? r.book_id },
+          { header: "Borrowed", cell: (r) => r.borrowed_at },
+          { header: "Due", cell: (r) => r.due_date ?? "—" },
+          { header: "Status", cell: (r) => r.status },
+        ]}
+      />
     </div>
   );
 }
