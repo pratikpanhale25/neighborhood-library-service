@@ -1,4 +1,4 @@
--- Neighborhood Library — canonical PostgreSQL DDL (matches SQLAlchemy models in backend/app/models).
+-- Neighborhood Library — canonical PostgreSQL DDL (matches SQLAlchemy models in backend/app/db).
 -- Apply once per database: psql "$DATABASE_URL_LIBPQ" -v ON_ERROR_STOP=1 -f scripts/init_db.sql
 -- Use postgresql://... (not postgresql+psycopg2://) with psql, or strip the +psycopg2 driver suffix.
 

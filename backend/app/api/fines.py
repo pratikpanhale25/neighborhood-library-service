@@ -10,20 +10,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.schemas.library import FineActionRequest, FineRead, PaginatedFines
 from app.services import fines_service
+from app.services.proto_enum_maps import fine_status_filter_from_rest_status
 
 router = APIRouter(prefix="/fines", tags=["fines"])
-
-
-def _status_enum(status: Optional[str]) -> int:
-    """Translate REST status query into service status enum."""
-    s = (status or "any").lower().strip()
-    if s == "pending":
-        return 1
-    if s == "paid":
-        return 2
-    if s == "waived":
-        return 3
-    return 4
 
 
 @router.get("", response_model=PaginatedFines)
@@ -38,7 +27,7 @@ def list_fines(
     rows, tok = fines_service.list_fines(
         db,
         member_id=member_id or "",
-        status_filter_enum=_status_enum(status),
+        status_filter_enum=fine_status_filter_from_rest_status(status),
         page_size=page_size,
         page_token=page_token,
     )

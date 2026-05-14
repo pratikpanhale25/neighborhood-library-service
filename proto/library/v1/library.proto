@@ -3,6 +3,7 @@ syntax = "proto3";
 package library.v1;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/neighborhood-library/gen/library/v1;libraryv1";
 
@@ -81,6 +82,9 @@ message UpdateBookRequest {
   string isbn = 4;
   int32 publication_year = 5;
   optional int32 total_copies = 6;
+  // When empty: all provided scalar fields are applied (backward compatible).
+  // When set: only listed paths (e.g. "title", "total_copies") are updated from this message.
+  google.protobuf.FieldMask update_mask = 7;
 }
 
 message UpdateBookResponse {
@@ -98,6 +102,10 @@ message GetBookResponse {
 message ListBooksRequest {
   int32 page_size = 1;
   string page_token = 2;
+  // Optional case-insensitive substring match on title, author, or ISBN.
+  string query = 3;
+  // Optional extra filter on author column only (combined with query when both set).
+  string author = 4;
 }
 
 message ListBooksResponse {
@@ -124,6 +132,8 @@ message UpdateMemberRequest {
   string email = 3;
   string phone = 4;
   string address = 5;
+  // When empty: all provided fields are applied. When set: only listed paths are updated.
+  google.protobuf.FieldMask update_mask = 6;
 }
 
 message UpdateMemberResponse {
@@ -141,6 +151,8 @@ message GetMemberResponse {
 message ListMembersRequest {
   int32 page_size = 1;
   string page_token = 2;
+  // Optional case-insensitive substring match on full_name or email.
+  string query = 3;
 }
 
 message ListMembersResponse {

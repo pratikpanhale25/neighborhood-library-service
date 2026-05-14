@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.schemas.library import BookCreate, BookRead, BookUpdate, PaginatedBooks
 from app.services import books_service
+
 
 router = APIRouter(prefix="/books", tags=["books"])
 
@@ -53,9 +56,17 @@ def list_books(
     db: Session = Depends(get_db),
     page_size: int = Query(default=50, ge=1, le=200),
     page_token: str = Query(default=""),
+    query: Optional[str] = Query(default=None, description="Substring match on title, author, or ISBN"),
+    author: Optional[str] = Query(default=None, description="Additional filter on author only"),
 ) -> PaginatedBooks:
     """List books with cursor-style pagination."""
-    rows, tok = books_service.list_books(db, page_size=page_size, page_token=page_token)
+    rows, tok = books_service.list_books(
+        db,
+        page_size=page_size,
+        page_token=page_token,
+        query=query,
+        author=author,
+    )
     return PaginatedBooks(
         items=[BookRead.model_validate(r) for r in rows],
         next_page_token=tok,

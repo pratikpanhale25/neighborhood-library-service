@@ -16,15 +16,6 @@ def get_settings() -> Settings:
 
 
 def get_db() -> Generator[Session, None, None]:
-    """Provide transactional DB session per request."""
-    if db_session.SessionLocal is None:
-        raise RuntimeError("Database not initialized")
-    db = db_session.SessionLocal()
-    try:
+    """Provide transactional DB session per request (same semantics as gRPC)."""
+    with db_session.transactional_session() as db:
         yield db
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
