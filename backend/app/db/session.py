@@ -38,8 +38,11 @@ def get_engine():
 
 
 @contextmanager
-def session_scope() -> Generator[Session, None, None]:
-    """Provide a transactional scope around a series of operations."""
+def transactional_session() -> Generator[Session, None, None]:
+    """Match FastAPI ``get_db`` semantics for gRPC (commit on success, rollback on error).
+
+    Code review: REST and gRPC should share one lifecycle pattern to avoid drift.
+    """
     if SessionLocal is None:
         raise RuntimeError("init_engine was not called")
     session = SessionLocal()
@@ -51,6 +54,13 @@ def session_scope() -> Generator[Session, None, None]:
         raise
     finally:
         session.close()
+
+
+@contextmanager
+def session_scope() -> Generator[Session, None, None]:
+    """Provide a transactional scope around a series of operations."""
+    with transactional_session() as session:
+        yield session
 
 
 def ping_database() -> None:

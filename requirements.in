@@ -11,3 +11,4 @@ python-dotenv>=1.0.0
 pydantic>=2.0
 pydantic-settings>=2.2.0
 structlog>=24.1.0
+grpcio-reflection>=1.62.0

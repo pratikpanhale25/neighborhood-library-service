@@ -1,6 +1,7 @@
 import datetime
 
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -143,20 +144,22 @@ class CreateBookResponse(_message.Message):
     def __init__(self, book: _Optional[_Union[Book, _Mapping]] = ...) -> None: ...
 
 class UpdateBookRequest(_message.Message):
-    __slots__ = ("id", "title", "author", "isbn", "publication_year", "total_copies")
+    __slots__ = ("id", "title", "author", "isbn", "publication_year", "total_copies", "update_mask")
     ID_FIELD_NUMBER: _ClassVar[int]
     TITLE_FIELD_NUMBER: _ClassVar[int]
     AUTHOR_FIELD_NUMBER: _ClassVar[int]
     ISBN_FIELD_NUMBER: _ClassVar[int]
     PUBLICATION_YEAR_FIELD_NUMBER: _ClassVar[int]
     TOTAL_COPIES_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
     id: str
     title: str
     author: str
     isbn: str
     publication_year: int
     total_copies: int
-    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., author: _Optional[str] = ..., isbn: _Optional[str] = ..., publication_year: _Optional[int] = ..., total_copies: _Optional[int] = ...) -> None: ...
+    update_mask: _field_mask_pb2.FieldMask
+    def __init__(self, id: _Optional[str] = ..., title: _Optional[str] = ..., author: _Optional[str] = ..., isbn: _Optional[str] = ..., publication_year: _Optional[int] = ..., total_copies: _Optional[int] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
 
 class UpdateBookResponse(_message.Message):
     __slots__ = ("book",)
@@ -177,12 +180,16 @@ class GetBookResponse(_message.Message):
     def __init__(self, book: _Optional[_Union[Book, _Mapping]] = ...) -> None: ...
 
 class ListBooksRequest(_message.Message):
-    __slots__ = ("page_size", "page_token")
+    __slots__ = ("page_size", "page_token", "query", "author")
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    AUTHOR_FIELD_NUMBER: _ClassVar[int]
     page_size: int
     page_token: str
-    def __init__(self, page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+    query: str
+    author: str
+    def __init__(self, page_size: _Optional[int] = ..., page_token: _Optional[str] = ..., query: _Optional[str] = ..., author: _Optional[str] = ...) -> None: ...
 
 class ListBooksResponse(_message.Message):
     __slots__ = ("books", "next_page_token")
@@ -211,18 +218,20 @@ class CreateMemberResponse(_message.Message):
     def __init__(self, member: _Optional[_Union[Member, _Mapping]] = ...) -> None: ...
 
 class UpdateMemberRequest(_message.Message):
-    __slots__ = ("id", "full_name", "email", "phone", "address")
+    __slots__ = ("id", "full_name", "email", "phone", "address", "update_mask")
     ID_FIELD_NUMBER: _ClassVar[int]
     FULL_NAME_FIELD_NUMBER: _ClassVar[int]
     EMAIL_FIELD_NUMBER: _ClassVar[int]
     PHONE_FIELD_NUMBER: _ClassVar[int]
     ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    UPDATE_MASK_FIELD_NUMBER: _ClassVar[int]
     id: str
     full_name: str
     email: str
     phone: str
     address: str
-    def __init__(self, id: _Optional[str] = ..., full_name: _Optional[str] = ..., email: _Optional[str] = ..., phone: _Optional[str] = ..., address: _Optional[str] = ...) -> None: ...
+    update_mask: _field_mask_pb2.FieldMask
+    def __init__(self, id: _Optional[str] = ..., full_name: _Optional[str] = ..., email: _Optional[str] = ..., phone: _Optional[str] = ..., address: _Optional[str] = ..., update_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ...) -> None: ...
 
 class UpdateMemberResponse(_message.Message):
     __slots__ = ("member",)
@@ -243,12 +252,14 @@ class GetMemberResponse(_message.Message):
     def __init__(self, member: _Optional[_Union[Member, _Mapping]] = ...) -> None: ...
 
 class ListMembersRequest(_message.Message):
-    __slots__ = ("page_size", "page_token")
+    __slots__ = ("page_size", "page_token", "query")
     PAGE_SIZE_FIELD_NUMBER: _ClassVar[int]
     PAGE_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
     page_size: int
     page_token: str
-    def __init__(self, page_size: _Optional[int] = ..., page_token: _Optional[str] = ...) -> None: ...
+    query: str
+    def __init__(self, page_size: _Optional[int] = ..., page_token: _Optional[str] = ..., query: _Optional[str] = ...) -> None: ...
 
 class ListMembersResponse(_message.Message):
     __slots__ = ("members", "next_page_token")

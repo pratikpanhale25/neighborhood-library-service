@@ -48,6 +48,15 @@ def main() -> None:
 
     grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     pb_grpc.add_LibraryServiceServicer_to_server(LibraryServicer(settings), grpc_server)
+    # Reflection lets grpcurl / debugging discover RPCs without hand-maintained stubs (review).
+    from grpc_reflection.v1alpha import reflection
+    from library.v1 import library_pb2 as pb_lib
+
+    service_names = (
+        pb_lib.DESCRIPTOR.services_by_name["LibraryService"].full_name,
+        reflection.SERVICE_NAME,
+    )
+    reflection.enable_server_reflection(service_names, grpc_server, pool=pb_lib.DESCRIPTOR.pool)
     listen_addr = f"{settings.grpc_host}:{settings.grpc_port}"
     grpc_server.add_insecure_port(listen_addr)
     grpc_server.start()

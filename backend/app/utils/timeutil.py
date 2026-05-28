@@ -8,6 +8,11 @@ from typing import Optional
 from google.protobuf.timestamp_pb2 import Timestamp
 
 
+def utc_now() -> datetime:
+    """Single clock source for domain timestamps (review: avoid scattered ``datetime.now``)."""
+    return datetime.now(timezone.utc)
+
+
 def datetime_to_pb(dt: Optional[datetime]) -> Optional[Timestamp]:
     """Convert datetime to protobuf Timestamp."""
     if dt is None:

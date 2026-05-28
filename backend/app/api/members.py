@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -18,6 +16,7 @@ from app.schemas.library import (
     PaginatedMembers,
 )
 from app.services import loans_service, members_service
+from app.utils import timeutil
 
 router = APIRouter(prefix="/members", tags=["members"])
 
@@ -40,9 +39,10 @@ def list_members(
     db: Session = Depends(get_db),
     page_size: int = Query(default=50, ge=1, le=200),
     page_token: str = Query(default=""),
+    query: Optional[str] = Query(default=None, description="Substring match on name or email"),
 ) -> PaginatedMembers:
     """List members with pagination."""
-    rows, tok = members_service.list_members(db, page_size=page_size, page_token=page_token)
+    rows, tok = members_service.list_members(db, page_size=page_size, page_token=page_token, query=query)
     return PaginatedMembers(
         items=[MemberRead.from_member(r) for r in rows],
         next_page_token=tok,
@@ -52,7 +52,7 @@ def list_members(
 @router.get("/{member_id}/borrowed-books", response_model=List[BorrowRecordRead])
 def borrowed_books(member_id: str, db: Session = Depends(get_db)) -> List[BorrowRecordRead]:
     """Return active borrowed books for a member."""
-    now = datetime.now(timezone.utc)
+    now = timeutil.utc_now()
     rows = loans_service.list_active_loans_for_member(db, member_id=member_id)
     return [BorrowRecordRead.from_loan(r, reference_time=now) for r in rows]
 
