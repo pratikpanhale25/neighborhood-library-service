@@ -2,6 +2,22 @@
  * REST client for the FastAPI backend (`NEXT_PUBLIC_API_BASE_URL`, default http://127.0.0.1:8000).
  */
 
+import {
+  bookDetailPath,
+  booksListPath,
+  borrowPath,
+  borrowRecordsPath,
+  finePayPath,
+  fineWaivePath,
+  finesListPath,
+  memberBorrowedBooksPath,
+  memberDetailPath,
+  membersListPath,
+  returnPath,
+} from "@/lib/api-endpoints";
+
+// REST paths come from api-endpoints so renames stay centralized (see module docstring there).
+
 const defaultBase = "http://127.0.0.1:8000";
 
 export function apiBaseUrl(): string {
@@ -53,7 +69,7 @@ export async function apiListBooks(params?: { page_size?: number; page_token?: s
       updated_at: string;
     }>;
     next_page_token: string;
-  }>(`/books${qs ? `?${qs}` : ""}`);
+  }>(`${booksListPath()}${qs ? `?${qs}` : ""}`);
 }
 
 export async function apiGetBook(id: string) {
@@ -67,7 +83,7 @@ export async function apiGetBook(id: string) {
     available_copies: number;
     created_at: string;
     updated_at: string;
-  }>(`/books/${encodeURIComponent(id)}`);
+  }>(bookDetailPath(id));
 }
 
 export async function apiCreateBook(body: {
@@ -77,7 +93,7 @@ export async function apiCreateBook(body: {
   publication_year?: number | null;
   total_copies?: number;
 }) {
-  return apiJson<unknown>("/books", { method: "POST", body: JSON.stringify(body) });
+  return apiJson<unknown>(booksListPath(), { method: "POST", body: JSON.stringify(body) });
 }
 
 export async function apiUpdateBook(
@@ -90,7 +106,7 @@ export async function apiUpdateBook(
     total_copies?: number | null;
   },
 ) {
-  return apiJson<unknown>(`/books/${encodeURIComponent(id)}`, {
+  return apiJson<unknown>(bookDetailPath(id), {
     method: "PUT",
     body: JSON.stringify(body),
   });
@@ -112,7 +128,7 @@ export async function apiListMembers(params?: { page_size?: number; page_token?:
       updated_at: string;
     }>;
     next_page_token: string;
-  }>(`/members${qs ? `?${qs}` : ""}`);
+  }>(`${membersListPath()}${qs ? `?${qs}` : ""}`);
 }
 
 export async function apiGetMember(id: string) {
@@ -124,7 +140,7 @@ export async function apiGetMember(id: string) {
     address: string | null;
     created_at: string;
     updated_at: string;
-  }>(`/members/${encodeURIComponent(id)}`);
+  }>(memberDetailPath(id));
 }
 
 export async function apiCreateMember(body: {
@@ -133,14 +149,14 @@ export async function apiCreateMember(body: {
   phone: string;
   address?: string | null;
 }) {
-  return apiJson<unknown>("/members", { method: "POST", body: JSON.stringify(body) });
+  return apiJson<unknown>(membersListPath(), { method: "POST", body: JSON.stringify(body) });
 }
 
 export async function apiUpdateMember(
   id: string,
   body: { name: string; email: string; phone: string; address?: string | null },
 ) {
-  return apiJson<unknown>(`/members/${encodeURIComponent(id)}`, {
+  return apiJson<unknown>(memberDetailPath(id), {
     method: "PUT",
     body: JSON.stringify(body),
   });
@@ -157,7 +173,7 @@ export async function apiMemberBorrowedBooks(memberId: string) {
       returned_at: string | null;
       status: string;
     }>
-  >(`/members/${encodeURIComponent(memberId)}/borrowed-books`);
+  >(memberBorrowedBooksPath(memberId));
 }
 
 export async function apiBorrow(body: {
@@ -166,7 +182,7 @@ export async function apiBorrow(body: {
   due_date?: string | null;
   loan_period_days?: number | null;
 }) {
-  return apiJson<unknown>("/borrow", { method: "POST", body: JSON.stringify(body) });
+  return apiJson<unknown>(borrowPath(), { method: "POST", body: JSON.stringify(body) });
 }
 
 export async function apiReturn(body: {
@@ -178,7 +194,7 @@ export async function apiReturn(body: {
   if (body.loan_id) payload.loan_id = body.loan_id;
   if (body.member_id) payload.member_id = body.member_id;
   if (body.book_id) payload.book_id = body.book_id;
-  return apiJson<unknown>("/return", { method: "POST", body: JSON.stringify(payload) });
+  return apiJson<unknown>(returnPath(), { method: "POST", body: JSON.stringify(payload) });
 }
 
 export async function apiBorrowRecords(params?: {
@@ -206,7 +222,7 @@ export async function apiBorrowRecords(params?: {
       status: string;
     }>;
     next_page_token: string;
-  }>(`/borrow-records${qs ? `?${qs}` : ""}`);
+  }>(`${borrowRecordsPath()}${qs ? `?${qs}` : ""}`);
 }
 
 export async function apiListFines(params?: {
@@ -235,18 +251,18 @@ export async function apiListFines(params?: {
       notes: string | null;
     }>;
     next_page_token: string;
-  }>(`/fines${qs ? `?${qs}` : ""}`);
+  }>(`${finesListPath()}${qs ? `?${qs}` : ""}`);
 }
 
 export async function apiPayFine(fineId: string, notes?: string) {
-  return apiJson<unknown>(`/fines/${encodeURIComponent(fineId)}/pay`, {
+  return apiJson<unknown>(finePayPath(fineId), {
     method: "POST",
     body: JSON.stringify({ notes: notes ?? "" }),
   });
 }
 
 export async function apiWaiveFine(fineId: string, notes?: string) {
-  return apiJson<unknown>(`/fines/${encodeURIComponent(fineId)}/waive`, {
+  return apiJson<unknown>(fineWaivePath(fineId), {
     method: "POST",
     body: JSON.stringify({ notes: notes ?? "" }),
   });

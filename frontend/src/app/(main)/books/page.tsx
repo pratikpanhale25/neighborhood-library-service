@@ -1,19 +1,32 @@
 "use client";
 
 import useSWR from "swr";
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 import { apiCreateBook, apiListBooks, ApiError } from "@/lib/api-client";
+import { DataTable } from "@/components/DataTable";
+import { FormDialog } from "@/components/FormDialog";
+import { ListPaginationBar } from "@/components/ListPaginationBar";
+import { goNextCursor, goPrevCursor, initialCursorNav, type CursorNav } from "@/lib/list-cursor-nav";
+import { requireTrimmedNonEmpty } from "@/lib/form-validation";
+import { useAsyncAction } from "@/lib/use-async-action";
 
-const listFetcher = () => apiListBooks({ page_size: 100 });
+const PAGE_SIZE = 25;
 
 export default function BooksPage() {
-  const { data, error, isLoading, mutate } = useSWR("books-list", listFetcher);
+  const [listNav, setListNav] = useState<CursorNav>(initialCursorNav);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [isbn, setIsbn] = useState("");
   const [copies, setCopies] = useState("1");
   const [formErr, setFormErr] = useState("");
+  const { pending, run } = useAsyncAction();
+
+  const { data, error, isLoading, mutate } = useSWR(
+    ["books-list", listNav.cursor, PAGE_SIZE],
+    () => apiListBooks({ page_size: PAGE_SIZE, page_token: listNav.cursor }),
+  );
 
   const rows = data?.items ?? [];
   const errMsg =
@@ -23,35 +36,73 @@ export default function BooksPage() {
         ? error.message
         : "";
 
+  function openCreate() {
+    setFormErr("");
+    setTitle("");
+    setAuthor("");
+    setIsbn("");
+    setCopies("1");
+    setDialogOpen(true);
+  }
+
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
     setFormErr("");
-    try {
-      await apiCreateBook({
-        title,
-        author,
-        isbn,
-        total_copies: Math.max(1, parseInt(copies, 10) || 1),
-      });
-      setTitle("");
-      setAuthor("");
-      setIsbn("");
-      setCopies("1");
-      await mutate();
-    } catch (ex) {
-      setFormErr(ex instanceof Error ? ex.message : "Create failed");
+
+    // WHY: trim and reject empty strings server-side would still cost a round-trip; validate here first.
+    const t = requireTrimmedNonEmpty(title, "Title");
+    const a = requireTrimmedNonEmpty(author, "Author");
+    const i = requireTrimmedNonEmpty(isbn, "Book number");
+    if (!t.ok) {
+      setFormErr(t.error);
+      return;
     }
+    if (!a.ok) {
+      setFormErr(a.error);
+      return;
+    }
+    if (!i.ok) {
+      setFormErr(i.error);
+      return;
+    }
+
+    await run(async () => {
+      try {
+        await apiCreateBook({
+          title: t.value,
+          author: a.value,
+          isbn: i.value,
+          total_copies: Math.max(1, parseInt(copies, 10) || 1),
+        });
+        setDialogOpen(false);
+        await mutate();
+      } catch (ex) {
+        setFormErr(ex instanceof Error ? ex.message : "Create failed");
+      }
+    });
   }
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-semibold text-zinc-900">Books</h1>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold text-zinc-900">Books</h1>
+        <button
+          type="button"
+          className="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white hover:bg-zinc-800"
+          onClick={openCreate}
+        >
+          Add book
+        </button>
+      </div>
 
-      <form
+      <FormDialog
+        open={dialogOpen}
+        title="Add book"
+        submitLabel="Create"
+        pending={pending}
+        onClose={() => !pending && setDialogOpen(false)}
         onSubmit={onCreate}
-        className="mb-8 space-y-3 rounded border border-zinc-200 bg-zinc-50 p-4 text-sm"
       >
-        <h2 className="font-medium text-zinc-800">Add book</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="text-zinc-600">Title</span>
@@ -59,7 +110,6 @@ export default function BooksPage() {
               className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              required
             />
           </label>
           <label className="block">
@@ -68,7 +118,6 @@ export default function BooksPage() {
               className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
-              required
             />
           </label>
           <label className="block">
@@ -77,7 +126,6 @@ export default function BooksPage() {
               className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
               value={isbn}
               onChange={(e) => setIsbn(e.target.value)}
-              required
             />
           </label>
           <label className="block">
@@ -92,57 +140,47 @@ export default function BooksPage() {
           </label>
         </div>
         {formErr ? <p className="text-sm text-red-700">{formErr}</p> : null}
-        <button
-          type="submit"
-          className="rounded bg-zinc-900 px-3 py-1.5 text-white hover:bg-zinc-800"
-        >
-          Create
-        </button>
-      </form>
+      </FormDialog>
 
-      {isLoading ? <p className="text-sm text-zinc-600">Loading…</p> : null}
       {errMsg ? (
-        <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{errMsg}</p>
+        <p className="mb-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{errMsg}</p>
       ) : null}
 
-      <div className="overflow-x-auto rounded border border-zinc-200 bg-white">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-zinc-200 bg-zinc-50 text-zinc-700">
-            <tr>
-              <th className="px-3 py-2 font-medium">Title</th>
-              <th className="px-3 py-2 font-medium">Author</th>
-              <th className="px-3 py-2 font-medium">Book Number</th>
-              <th className="px-3 py-2 font-medium">Copies</th>
-              <th className="px-3 py-2 font-medium">Available</th>
-              <th className="px-3 py-2 font-medium" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && !isLoading ? (
-              <tr>
-                <td className="px-3 py-4 text-zinc-500" colSpan={6}>
-                  No books yet.
-                </td>
-              </tr>
-            ) : (
-              rows.map((b) => (
-                <tr key={b.id} className="border-b border-zinc-100">
-                  <td className="px-3 py-2">{b.title}</td>
-                  <td className="px-3 py-2">{b.author}</td>
-                  <td className="px-3 py-2">{b.isbn}</td>
-                  <td className="px-3 py-2">{b.total_copies}</td>
-                  <td className="px-3 py-2">{b.available_copies}</td>
-                  <td className="px-3 py-2">
-                    <Link href={`/books/${b.id}/edit`} className="text-blue-700 underline">
-                      Edit
-                    </Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <ListPaginationBar
+        disabled={isLoading}
+        canPrevious={listNav.backStack.length > 0}
+        canNext={Boolean(data?.next_page_token)}
+        onPrevious={() => {
+          const prev = goPrevCursor(listNav);
+          if (prev) setListNav(prev);
+        }}
+        onNext={() => {
+          const n = data?.next_page_token;
+          if (n) setListNav((nav) => goNextCursor(nav, n));
+        }}
+      />
+
+      <DataTable
+        rowKey={(b) => b.id}
+        emptyMessage="No books on this page."
+        isLoading={isLoading}
+        rows={rows}
+        columns={[
+          { header: "Title", cell: (b) => b.title },
+          { header: "Author", cell: (b) => b.author },
+          { header: "Book Number", cell: (b) => b.isbn },
+          { header: "Copies", cell: (b) => b.total_copies },
+          { header: "Available", cell: (b) => b.available_copies },
+          {
+            header: "",
+            cell: (b) => (
+              <Link href={`/books/${b.id}/edit`} className="text-blue-700 underline">
+                Edit
+              </Link>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

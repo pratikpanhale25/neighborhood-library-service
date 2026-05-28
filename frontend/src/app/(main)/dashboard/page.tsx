@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import useSWR from "swr";
 import { apiBaseUrl, apiBorrowRecords, apiJson, apiListBooks, apiListMembers, ApiError } from "@/lib/api-client";
 
@@ -55,19 +56,19 @@ export default function DashboardPage() {
       </dl>
       <ul className="flex flex-col gap-2 text-zinc-800">
         <li>
-          <a href="/books" className="text-blue-700 underline hover:text-blue-900">
+          <Link href="/books" className="text-blue-700 underline hover:text-blue-900">
             Books
-          </a>
+          </Link>
         </li>
         <li>
-          <a href="/members" className="text-blue-700 underline hover:text-blue-900">
+          <Link href="/members" className="text-blue-700 underline hover:text-blue-900">
             Members
-          </a>
+          </Link>
         </li>
         <li>
-          <a href="/circulation" className="text-blue-700 underline hover:text-blue-900">
+          <Link href="/circulation" className="text-blue-700 underline hover:text-blue-900">
             Borrow / Return
-          </a>
+          </Link>
         </li>
       </ul>
     </div>

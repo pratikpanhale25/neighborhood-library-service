@@ -4,6 +4,9 @@ import useSWR from "swr";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiGetBook, apiUpdateBook, ApiError } from "@/lib/api-client";
+import { FormDialog } from "@/components/FormDialog";
+import { requireTrimmedNonEmpty } from "@/lib/form-validation";
+import { useAsyncAction } from "@/lib/use-async-action";
 
 export default function EditBookPage() {
   const params = useParams();
@@ -16,6 +19,7 @@ export default function EditBookPage() {
   const [total, setTotal] = useState("");
   const [year, setYear] = useState("");
   const [msg, setMsg] = useState("");
+  const { pending, run } = useAsyncAction();
 
   useEffect(() => {
     if (!data) return;
@@ -26,21 +30,54 @@ export default function EditBookPage() {
     setYear(data.publication_year != null ? String(data.publication_year) : "");
   }, [data]);
 
+  function handleClose() {
+    router.push("/books");
+  }
+
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     setMsg("");
-    try {
-      await apiUpdateBook(id, {
-        title,
-        author,
-        isbn,
-        publication_year: year ? parseInt(year, 10) : null,
-        total_copies: total ? parseInt(total, 10) : null,
-      });
-      router.push("/books");
-    } catch (ex) {
-      setMsg(ex instanceof ApiError ? ex.body || ex.message : "Save failed");
+
+    const t = requireTrimmedNonEmpty(title, "Title");
+    const a = requireTrimmedNonEmpty(author, "Author");
+    const i = requireTrimmedNonEmpty(isbn, "Book number");
+    const tot = requireTrimmedNonEmpty(total, "Total copies");
+    if (!t.ok) {
+      setMsg(t.error);
+      return;
     }
+    if (!a.ok) {
+      setMsg(a.error);
+      return;
+    }
+    if (!i.ok) {
+      setMsg(i.error);
+      return;
+    }
+    if (!tot.ok) {
+      setMsg(tot.error);
+      return;
+    }
+    const totalNum = parseInt(tot.value, 10);
+    if (Number.isNaN(totalNum) || totalNum < 1) {
+      setMsg("Total copies must be at least 1.");
+      return;
+    }
+
+    await run(async () => {
+      try {
+        await apiUpdateBook(id, {
+          title: t.value,
+          author: a.value,
+          isbn: i.value,
+          publication_year: year.trim() ? parseInt(year.trim(), 10) : null,
+          total_copies: totalNum,
+        });
+        router.push("/books");
+      } catch (ex) {
+        setMsg(ex instanceof ApiError ? ex.body || ex.message : "Save failed");
+      }
+    });
   }
 
   if (isLoading) return <p className="text-sm text-zinc-600">Loading…</p>;
@@ -51,35 +88,39 @@ export default function EditBookPage() {
       </p>
     );
 
+  // WHY: Reuse FormDialog for edit so Create/Edit share the same modal shell and behavior as list create.
   return (
-    <div>
-      <h1 className="mb-4 text-2xl font-semibold text-zinc-900">Edit book</h1>
-      <form onSubmit={onSave} className="max-w-lg space-y-3 text-sm">
-        <label className="block">
+    <FormDialog
+      open={Boolean(data)}
+      title="Edit book"
+      submitLabel="Save"
+      pending={pending}
+      onClose={handleClose}
+      onSubmit={onSave}
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block sm:col-span-2">
           <span className="text-zinc-600">Title</span>
           <input
             className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            required
           />
         </label>
-        <label className="block">
+        <label className="block sm:col-span-2">
           <span className="text-zinc-600">Author</span>
           <input
             className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
-            required
           />
         </label>
-        <label className="block">
+        <label className="block sm:col-span-2">
           <span className="text-zinc-600">Book Number</span>
           <input
             className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
             value={isbn}
             onChange={(e) => setIsbn(e.target.value)}
-            required
           />
         </label>
         <label className="block">
@@ -90,7 +131,6 @@ export default function EditBookPage() {
             className="mt-1 w-full rounded border border-zinc-300 px-2 py-1"
             value={total}
             onChange={(e) => setTotal(e.target.value)}
-            required
           />
         </label>
         <label className="block">
@@ -101,11 +141,8 @@ export default function EditBookPage() {
             onChange={(e) => setYear(e.target.value)}
           />
         </label>
-        {msg ? <p className="text-red-700">{msg}</p> : null}
-        <button type="submit" className="rounded bg-zinc-900 px-3 py-1.5 text-white">
-          Save
-        </button>
-      </form>
-    </div>
+      </div>
+      {msg ? <p className="text-sm text-red-700">{msg}</p> : null}
+    </FormDialog>
   );
 }
